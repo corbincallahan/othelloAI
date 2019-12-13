@@ -27,7 +27,8 @@ def choose_move(board_state, moves): #This is incorrect for now, should be based
     max = 0
     maxIndex = -1
     for i in range(len(moves)):
-        value = evaluate(board_state, moves[i])
+        new_state = update_board(board_state, moves[i])
+        value = evaluate(new_state)
         if(value > max):
             max = value
             maxIndex = i
