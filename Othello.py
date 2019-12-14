@@ -8,6 +8,10 @@ class Robothello(Othello_AI):
         # team_type will be either 'W' or 'B', indicating what color you are
         # board_size and time_limit will likely stay constant, but if you want this can add different challanges
         self.team_type = team_type
+        if(team_type == 'B'):
+            self.enemy = 'W'
+        else:
+            self.enemy = 'B'
       
     def get_move(self, board_state):
         # board state will be an board_size by board_size array with the current state of the game.
@@ -23,38 +27,71 @@ class Robothello(Othello_AI):
         # returns a string containing your team name
         return "Default bot"
 
-def choose_move(board_state, moves): #This is incorrect for now, should be based upon minimax algorithm
-    max = 0
-    maxIndex = -1
-    for i in range(len(moves)):
-        new_state = update_board(board_state, moves[i])
-        value = evaluate(new_state)
-        if(value > max):
-            max = value
-            maxIndex = i
-    return moves[maxIndex]
+    # Credit to Sebastian Lague for the psuedocode of this function, https://www.youtube.com/watch?v=l-hh51ncgDI
+    # Call with maximizingPlay as true when turn == self.team_type
+    def minimax(self, position, depth, alpha, beta, maximizingPlayer):
+        if depth == 0:
+            return evaluate(position, self.team_type) # Should this be called with team_type?
 
-#Make an minimax function that takes board state, who's turn it is, and depth. Recursively call the function with decreasing depth, utilizing pruning to reduce branching
-def minimax(board_state, turn, depth):
-    if(turn == 'B'):
-        enemy = 'W'
-    else:
-        enemy = "B"
-    for move in get_all_moves(board_state, turn):
-        new_state = update_board(board_state, move)
-        for oppMove in get_all_moves(new_state, enemy):
-            evaluate(new_state, oppMove)
+        endgame = check_end(position)
+        if endgame:
+            if(endgame == self.team_type):
+                return 999999999 # Replace with max val?
+            if(endgame == self.enemy):
+                return -999999999
+            return 0 # ??? How should tying be considered? Not likely to occur, but useful
+    
+        if maximizingPlayer:
+            maxEval = -999999999
+            for child in get_all_moves(position, self.team_type):
+                eval = self.minimax(child, depth - 1, alpha, beta, False)
+                maxEval = max(maxEval, eval)
+                alpha = max(alpha, eval)
+                if beta <= alpha:
+                    break
+            return maxEval
+        else:
+            minEval = 999999999
+            for child in get_all_moves(position, self.enemy):
+                eval = self.minimax(child, depth - 1, alpha, beta, True)
+                minEval = min(minEval, eval)
+                beta = min(beta, eval)
+                if beta <= alpha:
+                    break
+            return minEval
 
-def evaluate(board_state, move):
+def choose_move(board_state, moves):
+    pass
+
+# Returns higher values when board_state favors the player
+def evaluate(board_state, player):
     return -1
+
+def check_end(board_state):
+      # Check the board to see if the game can continue
+      # If the game is over return the winner: 'W', 'B', or 'T'
+      # Otherwise, return None
+
+      if len(get_all_moves(board_state, 'W')) != 0 or len(get_all_moves(board_state, 'B')) != 0:
+         return None
+
+      white_count = sum(row.count('W') for row in board_state)
+      black_count = sum(row.count('B') for row in board_state)
+
+      if white_count == black_count:
+         return 'T'
+      elif white_count > black_count:
+         return 'W'
+      else:
+         return'B'
 
 def mobility(board_state, player):
     return len(get_all_moves(board_state, player))
 
-def total_value(board_state, moves):
+def total_value(board_state, moves, team):
     sum = 0
     for move in moves:
-        sum += evaluate(board_state, move)
+        sum += evaluate(update_board(board_state, move), team)
     return sum
 
 # def update_board(board_state, move): # Returns the state of the board after a move is made, assumes the move is legal
@@ -72,7 +109,7 @@ def total_value(board_state, moves):
 #         if(board_state[x + dx][y + dy] == enemy):
 
 # Perform move
-def update_board(board_state, move): # This is long and ugly and I want to write my own version
+def update_board(board_state, move): # This is long and I want to write my own version
     # move format: ('B', (i, j)) or ('B', None)
     # update the board state given the current move
     # if the move is None, do nothing
@@ -210,19 +247,19 @@ def update_board(board_state, move): # This is long and ugly and I want to write
         board_state[r][c] = color
     return board_state
 
-game_state = [['-' for i in range(8)] for j in range(8)]
-game_state[0][0] = 'W'
-game_state[0][1] = 'B'
-game_state[0][2] = 'B'
-game_state[0][3] = 'B'
-game_state[0][4] = 'B'
-game_state[0][5] = 'B'
-game_state[0][6] = 'B'
-game_state[1][1] = 'B'
-white_moves = get_all_moves(game_state, 'W')
-for move in white_moves:
-    x = move[1][0]
-    y = move[1][1]
-    game_state[x][y] = 'X'
-for i in range(len(game_state)):
-    print(game_state[i])
+# game_state = [['-' for i in range(8)] for j in range(8)]
+# game_state[0][0] = 'W'
+# game_state[0][1] = 'B'
+# game_state[0][2] = 'B'
+# game_state[0][3] = 'B'
+# game_state[0][4] = 'B'
+# game_state[0][5] = 'B'
+# game_state[0][6] = 'B'
+# game_state[1][1] = 'B'
+# white_moves = get_all_moves(game_state, 'W')
+# for move in white_moves:
+#     x = move[1][0]
+#     y = move[1][1]
+#     game_state[x][y] = 'X'
+# for i in range(len(game_state)):
+#     print(game_state[i])
