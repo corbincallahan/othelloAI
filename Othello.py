@@ -1,10 +1,10 @@
-from OthelloInterface import Othello_AI
+#from OthelloInterface import Othello_AI
 from OthelloEngine import get_all_moves
 from OthelloEngine import get_adjacencies
 import random
 
-class Robothello(Othello_AI):
-    def init(self, team_type, board_size=8, time_limit=2.0):
+class Othello_AI:
+    def __init__(self, team_type, board_size=8, time_limit=2.0):
         # team_type will be either 'W' or 'B', indicating what color you are
         # board_size and time_limit will likely stay constant, but if you want this can add different challanges
         self.team_type = team_type
@@ -20,12 +20,23 @@ class Robothello(Othello_AI):
         # Example move: ('W', (1, 6))
         moves = get_all_moves(board_state, self.team_type)
         if len(moves) > 0:
-            return choose_move(board_state, moves)
+            return self.choose_move(board_state, moves)
         return None
       
     def get_team_name(self):
         # returns a string containing your team name
-        return "Default bot"
+        return "Last place"
+
+    def choose_move(self, board_state, moves):
+        max = float("-inf")
+        maxIndex = -1
+        for i in range(len(moves)):
+            new_board = update_board(board_state, moves[i])
+            node = self.minimax(new_board, 6, float("-inf"), float("inf"), False) # Wrong?
+            if(node > max):
+                maxIndex = i
+                max = node
+        return moves[maxIndex]
 
     # Credit to Sebastian Lague for the psuedocode of this function, https://www.youtube.com/watch?v=l-hh51ncgDI
     # Call with maximizingPlay as true when turn == self.team_type
@@ -36,13 +47,13 @@ class Robothello(Othello_AI):
         endgame = check_end(position)
         if endgame:
             if(endgame == self.team_type):
-                return 999999999 # Replace with max val?
+                return float("inf")
             if(endgame == self.enemy):
-                return -999999999
+                return float("-inf")
             return 0 # ??? How should tying be considered? Not likely to occur, but useful
     
         if maximizingPlayer:
-            maxEval = -999999999
+            maxEval = float("-inf")
             for child in get_all_moves(position, self.team_type):
                 eval = self.minimax(child, depth - 1, alpha, beta, False)
                 maxEval = max(maxEval, eval)
@@ -51,7 +62,7 @@ class Robothello(Othello_AI):
                     break
             return maxEval
         else:
-            minEval = 999999999
+            minEval = float("inf")
             for child in get_all_moves(position, self.enemy):
                 eval = self.minimax(child, depth - 1, alpha, beta, True)
                 minEval = min(minEval, eval)
@@ -60,12 +71,17 @@ class Robothello(Othello_AI):
                     break
             return minEval
 
-def choose_move(board_state, moves):
-    pass
-
 # Returns higher values when board_state favors the player
 def evaluate(board_state, player):
-    return -1
+    return sum(row.count(player) for row in board_state)
+    # moveNumber = getMoveNumber(board_state)
+    # esac = ESAC(moveNumber)
+    # eStab = edgeStability(board_state, player)
+    # iStab = internalStability(board_state, player)
+    # cmac = CMAC(moveNumber)
+    # cMob = currentMobility(board_state, player)
+    # pMob = potentialMobility(board_state, player)
+    # return esac * eStab + 36 * iStab + cmac * cMob + 99 * pMob
 
 def check_end(board_state):
       # Check the board to see if the game can continue
@@ -246,6 +262,31 @@ def update_board(board_state, move): # This is long and I want to write my own v
         #set the spot in the game_state
         board_state[r][c] = color
     return board_state
+
+def getMoveNumber(board_state):
+    return 61 - sum(row.count('-') for row in board_state)
+
+# These functions come from Rosenbloom's paper on IAGO
+def ESAC(moveNumber):
+    return 6.24 * moveNumber + 312
+
+def CMAC(moveNumber):
+    if(moveNumber < 26):
+        return 2 * moveNumber + 50
+    else:
+        return moveNumber + 75
+
+def edgeStability(board_state, player):
+    pass
+
+def internalStability(board_state, player):
+    pass
+
+def currentMobility(board_state, player):
+    pass
+
+def potentialMobility(board_state, player):
+    pass
 
 # game_state = [['-' for i in range(8)] for j in range(8)]
 # game_state[0][0] = 'W'
