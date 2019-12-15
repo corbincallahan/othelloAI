@@ -1,4 +1,3 @@
-#from OthelloInterface import Othello_AI
 from OthelloEngine import get_all_moves
 from OthelloEngine import get_adjacencies
 import random
@@ -21,7 +20,7 @@ class Othello_AI:
         moves = get_all_moves(board_state, self.team_type)
         if len(moves) > 0:
             return self.choose_move(board_state, moves)
-        return None
+        return (self.team_type, None)
       
     def get_team_name(self):
         # returns a string containing your team name
@@ -30,9 +29,13 @@ class Othello_AI:
     def choose_move(self, board_state, moves):
         max = float("-inf")
         maxIndex = -1
+        if(getMoveNumber(board_state) > 47):
+            depth = 60
+        else:
+            depth = 6
         for i in range(len(moves)):
-            new_board = update_board(board_state, moves[i])
-            node = self.minimax(new_board, 6, float("-inf"), float("inf"), False) # Wrong?
+            new_board = update_board(board_state.copy(), moves[i])
+            node = self.minimax(new_board, depth, float("-inf"), float("inf"), False) # Wrong?
             if(node > max):
                 maxIndex = i
                 max = node
@@ -41,6 +44,7 @@ class Othello_AI:
     # Credit to Sebastian Lague for the psuedocode of this function, https://www.youtube.com/watch?v=l-hh51ncgDI
     # Call with maximizingPlay as true when turn == self.team_type
     def minimax(self, position, depth, alpha, beta, maximizingPlayer):
+        moveNumber = getMoveNumber(position)
         if depth == 0:
             return evaluate(position, self.team_type) # Should this be called with team_type?
 
@@ -54,7 +58,8 @@ class Othello_AI:
     
         if maximizingPlayer:
             maxEval = float("-inf")
-            for child in get_all_moves(position, self.team_type):
+            for move in get_all_moves(position, self.team_type):
+                child = update_board(position.copy(), move)
                 eval = self.minimax(child, depth - 1, alpha, beta, False)
                 maxEval = max(maxEval, eval)
                 alpha = max(alpha, eval)
@@ -63,7 +68,8 @@ class Othello_AI:
             return maxEval
         else:
             minEval = float("inf")
-            for child in get_all_moves(position, self.enemy):
+            for move in get_all_moves(position, self.enemy):
+                child = update_board(position.copy(), move)
                 eval = self.minimax(child, depth - 1, alpha, beta, True)
                 minEval = min(minEval, eval)
                 beta = min(beta, eval)
@@ -107,7 +113,7 @@ def mobility(board_state, player):
 def total_value(board_state, moves, team):
     sum = 0
     for move in moves:
-        sum += evaluate(update_board(board_state, move), team)
+        sum += evaluate(update_board(board_state.copy(), move), team)
     return sum
 
 # def update_board(board_state, move): # Returns the state of the board after a move is made, assumes the move is legal
