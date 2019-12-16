@@ -1,12 +1,14 @@
 from OthelloEngine import get_all_moves
 from OthelloEngine import get_adjacencies
 import random
+import math
 
 class Othello_AI:
     def __init__(self, team_type, board_size=8, time_limit=2.0):
         # team_type will be either 'W' or 'B', indicating what color you are
         # board_size and time_limit will likely stay constant, but if you want this can add different challanges
         self.team_type = team_type
+        self.n = board_size
         if(team_type == 'B'):
             self.enemy = 'W'
         else:
@@ -29,13 +31,13 @@ class Othello_AI:
     def choose_move(self, board_state, moves):
         max = float("-inf")
         maxIndex = -1
-        if(getMoveNumber(board_state) > 47):
-            depth = 60
-        else:
-            depth = 6
+        # if(getMoveNumber(board_state) > 47):
+        #     depth = 60
+        # else:
+        #     depth = 6
         for i in range(len(moves)):
             new_board = update_board(board_state.copy(), moves[i])
-            node = self.minimax(new_board, depth, float("-inf"), float("inf"), False) # Wrong?
+            node = self.minimax(new_board, 40, float("-inf"), float("inf"), False)
             if(node > max):
                 maxIndex = i
                 max = node
@@ -44,9 +46,8 @@ class Othello_AI:
     # Credit to Sebastian Lague for the psuedocode of this function, https://www.youtube.com/watch?v=l-hh51ncgDI
     # Call with maximizingPlay as true when turn == self.team_type
     def minimax(self, position, depth, alpha, beta, maximizingPlayer):
-        moveNumber = getMoveNumber(position)
         if depth == 0:
-            return evaluate(position, self.team_type) # Should this be called with team_type?
+            return self.evaluate(position)
 
         endgame = check_end(position)
         if endgame:
@@ -77,17 +78,25 @@ class Othello_AI:
                     break
             return minEval
 
-# Returns higher values when board_state favors the player
-def evaluate(board_state, player):
-    return sum(row.count(player) for row in board_state)
-    # moveNumber = getMoveNumber(board_state)
-    # esac = ESAC(moveNumber)
-    # eStab = edgeStability(board_state, player)
-    # iStab = internalStability(board_state, player)
-    # cmac = CMAC(moveNumber)
-    # cMob = currentMobility(board_state, player)
-    # pMob = potentialMobility(board_state, player)
-    # return esac * eStab + 36 * iStab + cmac * cMob + 99 * pMob
+    # Returns higher values when board_state favors the player
+    def evaluate(self, board_state):
+        moveNumber = getMoveNumber(board_state)
+        playerMob = mobility(board_state, self.team_type)
+        enemyMob = mobility(board_state, self.enemy)
+        mobilityDiff = (playerMob - enemyMob)
+
+        friendlyDiscs = 0
+        enemyDiscs = 0
+        for i in range(self.n):
+            for j in range(self.n):
+                if(board_state[i][j] == self.team_type):
+                    friendlyDiscs += getWeight(i, j)
+                elif(board_state[i][j] == self.enemy):
+                    enemyDiscs += getWeight(i, j)
+        discDiff = friendlyDiscs - enemyDiscs
+
+        #print((moveNumber * mobilityDiff) / (60 * 10) + ((moveNumber - 30) * discDiff) / ((4 + 2 * 12 + 3 * 20 + 4 * 28) * 30))
+        return (moveNumber * mobilityDiff) / (60 * 10) + ((moveNumber - 30) * discDiff) / ((4 + 2 * 12 + 3 * 20 + 4 * 28) * 30)
 
 def check_end(board_state):
       # Check the board to see if the game can continue
@@ -109,26 +118,6 @@ def check_end(board_state):
 
 def mobility(board_state, player):
     return len(get_all_moves(board_state, player))
-
-def total_value(board_state, moves, team):
-    sum = 0
-    for move in moves:
-        sum += evaluate(update_board(board_state.copy(), move), team)
-    return sum
-
-# def update_board(board_state, move): # Returns the state of the board after a move is made, assumes the move is legal
-#     color = move[0]
-#     if(color == 'B'):
-#         enemy = 'W'
-#     else:
-#         enemy = 'B'
-#     x = move[1][0]
-#     y = move[1][1]
-#     board_state[x][y] = color
-#     for ajacency in get_ajacencies():
-#         dx = ajacency[0]
-#         dy = ajacency[1]
-#         if(board_state[x + dx][y + dy] == enemy):
 
 # Perform move
 def update_board(board_state, move): # This is long and I want to write my own version
@@ -272,41 +261,11 @@ def update_board(board_state, move): # This is long and I want to write my own v
 def getMoveNumber(board_state):
     return 61 - sum(row.count('-') for row in board_state)
 
-# These functions come from Rosenbloom's paper on IAGO
-def ESAC(moveNumber):
-    return 6.24 * moveNumber + 312
-
-def CMAC(moveNumber):
-    if(moveNumber < 26):
-        return 2 * moveNumber + 50
-    else:
-        return moveNumber + 75
-
-def edgeStability(board_state, player):
-    pass
-
-def internalStability(board_state, player):
-    pass
-
-def currentMobility(board_state, player):
-    pass
-
-def potentialMobility(board_state, player):
-    pass
-
-# game_state = [['-' for i in range(8)] for j in range(8)]
-# game_state[0][0] = 'W'
-# game_state[0][1] = 'B'
-# game_state[0][2] = 'B'
-# game_state[0][3] = 'B'
-# game_state[0][4] = 'B'
-# game_state[0][5] = 'B'
-# game_state[0][6] = 'B'
-# game_state[1][1] = 'B'
-# white_moves = get_all_moves(game_state, 'W')
-# for move in white_moves:
-#     x = move[1][0]
-#     y = move[1][1]
-#     game_state[x][y] = 'X'
-# for i in range(len(game_state)):
-#     print(game_state[i])
+def getWeight(row, col):
+    if row == 0 or row == 7 or col == 0 or col == 7:
+        return 4
+    if row == 1 or row == 6 or col == 1 or col == 6:
+        return 3
+    if row == 2 or row == 5 or col == 2 or col == 5:
+        return 2
+    return 1
