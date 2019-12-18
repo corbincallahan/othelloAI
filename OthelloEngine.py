@@ -3,6 +3,9 @@ import json
 import sys
 import copy
 import signal
+import numpy as np
+
+stats = [[[0 for k in range(50)] for j in range(80)] for i in range(4)] # stats[0][0] is a list of values for black mobility on the first turn
 
 def timeout_handler(signum, frame):
     raise Exception
@@ -15,10 +18,11 @@ class GameEngine:
    # output_file is the name of the file the game will be recorded to
    # nxn is the size of the board. Default is 8x8
    # time_limit is the amount of time for each turn in seconds
-   def __init__(self, white_team_file, black_team_file, output_file, n = 8, time_limit = 2.0):
+   def __init__(self, white_team_file, black_team_file, output_file, n = 8, time_limit = 2.0, gameNum = -1):
       self.n = n
       self.time_limit = time_limit
       self.output_file = output_file
+      self.gameNum = gameNum
 
       # game_state is an nxn array containing all of the positions on the board.
       #       'W', 'B' and '-' are the possible values.
@@ -70,6 +74,11 @@ class GameEngine:
       while True:
          # Each team takes their turn
          for team in (self.black_team, self.white_team):
+             stats[0][self.turn_number - 1][self.gameNum] = len(get_all_moves(self.game_state, 'B'))
+             stats[1][self.turn_number - 1][self.gameNum] = len(get_all_moves(self.game_state, 'W'))
+             stats[2][self.turn_number - 1][self.gameNum] = sum([row.count('B') for row in self.game_state])
+             stats[3][self.turn_number - 1][self.gameNum] = sum([row.count('W') for row in self.game_state])
+
              move = self.record_turn(team)
              # record_turn returns a character IFF the team's move
              # causes them to lose automatically
@@ -382,12 +391,27 @@ def is_valid_move(x, y, dx, dy, board_state, player, surrounds):
    return False
 
 if __name__ == "__main__":
-   if len(sys.argv) >= 3:
-      g = GameEngine(white_team_file=sys.argv[1], black_team_file=sys.argv[2], output_file=sys.argv[3])
-      
-      # call play_game (returns winner)
-      g.winner = g.play_game()
-      # call output_game
-      g.output_game(g.winner)
-   else:
-      print("Usage: " + sys.argv[0] + " white_bot.py black_bot.py replay_file.txt")
+   for i in range(50):
+      if len(sys.argv) >= 3:
+         g = GameEngine(white_team_file=sys.argv[1], black_team_file=sys.argv[2], output_file=sys.argv[3], gameNum=i)
+         
+         # call play_game (returns winner)
+         print(g.play_game())
+         # call output_game
+         #g.output_game(g.winner)
+      else:
+         print("Usage: " + sys.argv[0] + " white_bot.py black_bot.py replay_file.txt")
+
+      strings = ["Black Mobility", "White Mobility", "Black Discs", "White Discs"]
+      with open("data.csv",'w',encoding = 'utf-8') as f:
+         for i in range(59):
+            strings[0] += ',' + str(np.mean(stats[0][i]))
+            strings[1] += ',' + str(np.mean(stats[1][i]))
+            strings[2] += ',' + str(np.mean(stats[2][i]))
+            strings[3] += ',' + str(np.mean(stats[3][i]))
+         f.write("Turn Number")
+         for i in range(59):
+            f.write(',' + str(i))
+         f.write('\n')
+         for i in range(4):
+            f.write(strings[i] + '\n')
